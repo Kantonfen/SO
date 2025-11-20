@@ -88,3 +88,26 @@ void printListaMemoria(const ListaMemoria *l, TipoBloque tipoFiltro) {
         }
     }
 }
+
+void removeBloqueMemoria(ListaMemoria *l, void *dir) {
+    int i;
+    // Buscamos el bloque por su dirección
+    for (i = 0; i < l->tamano; i++) {
+        if (l->data[i].direccion == dir) {
+            // Si es de tipo MMAP, hay que liberar la cadena duplicada del nombre
+            if (l->data[i].tipo == MMAP) {
+                free(l->data[i].info.mmap_data.nombre_fich);
+            }
+            // NOTA: NO hacemos free(l->data[i].direccion) aquí. 
+            // Se asume que el comando que llama a esta función ya hizo el free del sistema 
+            // o munmap correspondiente antes de pedir quitarlo de la lista.
+
+            // Movemos los elementos siguientes una posición atrás para tapar el hueco
+            for (int j = i; j < l->tamano - 1; j++) {
+                l->data[j] = l->data[j + 1];
+            }
+            l->tamano--;
+            return;
+        }
+    }
+}

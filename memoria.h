@@ -34,6 +34,6 @@ void initListaMemoria(ListaMemoria *l);
 void freeListaMemoria(ListaMemoria *l);
 void addBloqueMemoria(ListaMemoria *l, void *dir, size_t tam, TipoBloque tipo, key_t key, const char *fich, int fd);
 void printListaMemoria(const ListaMemoria *l, TipoBloque tipoFiltro);
-
+void removeBloqueMemoria(ListaMemoria *l, void *dir);
 
 #endif

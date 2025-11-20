@@ -318,39 +318,68 @@ void Cmd_listopen(char *tr[], OpenFiles *openFiles) {
 
 
 void Cmd_malloc(char *tr[], ListaMemoria *lm) {
-    // CASO 1: Listar bloques malloc (sin argumentos) 
+    // CASO 1: Listar (malloc)
     if (tr[1] == NULL) {
         printf("******Lista de bloques asignados malloc para el proceso %d\n", getpid());
         printListaMemoria(lm, MALLOC);
         return;
     }
 
-    // CASO 2: Liberar (malloc -free n) - DE MOMENTO PENDIENTE
+    // CASO 2: Liberar (malloc -free n)
     if (strcmp(tr[1], "-free") == 0) {
-        // if (tr[2] == NULL) ... error
-        printf("Funcionalidad de liberar pendiente de implementar...\n");
+        if (tr[2] == NULL) {
+            printf("******Lista de bloques asignados malloc para el proceso %d\n", getpid());
+            printListaMemoria(lm, MALLOC);
+            return;
+        }
+
+        size_t tam = (size_t)strtoul(tr[2], NULL, 10);
+        if (tam == 0) {
+            printf("No hay bloques de tamaño 0\n");
+            return;
+        }
+
+        int encontrado = 0;
+        for (int i = 0; i < lm->tamano; i++) {
+            // Buscamos un bloque MALLOC del tamaño indicado
+            if (lm->data[i].tipo == MALLOC && lm->data[i].tamano == tam) {
+                void *dir = lm->data[i].direccion;
+                
+                // CORRECCIÓN: Cambiamos el orden de las operaciones
+                
+                // 1. Imprimimos la información antes de tocar nada
+                printf("Liberados %lu bytes en %p\n", tam, dir);
+                
+                // 2. Lo quitamos de nuestra lista de control
+                removeBloqueMemoria(lm, dir);
+                
+                // 3. FINALMENTE liberamos la memoria del sistema
+                free(dir); 
+                
+                encontrado = 1;
+                break; // Salimos tras borrar UNO
+            }
+        }
+
+        if (!encontrado) {
+            printf("No hay bloque de ese tamaño asignado con malloc\n");
+        }
         return;
     }
 
-    // CASO 3: Asignar memoria (malloc n) 
-    // Convertimos el argumento a numero
+    // CASO 3: Asignar (malloc n)
     size_t tam = (size_t)strtoul(tr[1], NULL, 10);
-    
     if (tam == 0) {
         printf("No se asignan bloques de 0 bytes\n");
         return;
     }
 
-    // 1. Hacer el malloc del sistema
     void *dir = malloc(tam);
     if (dir == NULL) {
         perror("Error al asignar memoria");
         return;
     }
 
-    // 2. Añadir a nuestra lista de control
-    // Pasamos 0 y NULL en los campos de shared y mmap porque no aplican
-    addBloqueMemoria(lm, dir, tam, MALLOC, 0, NULL, 0); 
-
+    addBloqueMemoria(lm, dir, tam, MALLOC, 0, NULL, 0);
     printf("Asignados %lu bytes en %p\n", tam, dir);
 }
