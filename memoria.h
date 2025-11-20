@@ -7,6 +7,7 @@
 #include <sys/ipc.h>
 #include <time.h>
 
+
 typedef enum { MALLOC, SHARED, MMAP } TipoBloque;
 
 typedef struct {
@@ -29,10 +30,10 @@ typedef struct {
     int capacidad;
 } ListaMemoria;
 
-// Funciones básicas (las implementaremos pronto)
 void initListaMemoria(ListaMemoria *l);
 void freeListaMemoria(ListaMemoria *l);
-// void addBloqueMemoria(...); // Lo añadiremos luego para no complicarnos ahora
-void printListaMemoria(const ListaMemoria *l);
+void addBloqueMemoria(ListaMemoria *l, void *dir, size_t tam, TipoBloque tipo, key_t key, const char *fich, int fd);
+void printListaMemoria(const ListaMemoria *l, TipoBloque tipoFiltro);
+
 
 #endif

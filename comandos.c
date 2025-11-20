@@ -121,6 +121,9 @@ int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, L
     else if (strcmp(trozos[0], "lseek") == 0) {
         //Cmd_lseek(trozos);
     }
+    else if (strcmp(trozos[0], "malloc") == 0) {
+        Cmd_malloc(trozos, memoria);
+    }
     
     else {
         printf("Comando no reconocido: %s\n", trozos[0]);
@@ -313,3 +316,41 @@ void Cmd_listopen(char *tr[], OpenFiles *openFiles) {
     printOpenFiles(openFiles);
 }
 
+
+void Cmd_malloc(char *tr[], ListaMemoria *lm) {
+    // CASO 1: Listar bloques malloc (sin argumentos) 
+    if (tr[1] == NULL) {
+        printf("******Lista de bloques asignados malloc para el proceso %d\n", getpid());
+        printListaMemoria(lm, MALLOC);
+        return;
+    }
+
+    // CASO 2: Liberar (malloc -free n) - DE MOMENTO PENDIENTE
+    if (strcmp(tr[1], "-free") == 0) {
+        // if (tr[2] == NULL) ... error
+        printf("Funcionalidad de liberar pendiente de implementar...\n");
+        return;
+    }
+
+    // CASO 3: Asignar memoria (malloc n) 
+    // Convertimos el argumento a numero
+    size_t tam = (size_t)strtoul(tr[1], NULL, 10);
+    
+    if (tam == 0) {
+        printf("No se asignan bloques de 0 bytes\n");
+        return;
+    }
+
+    // 1. Hacer el malloc del sistema
+    void *dir = malloc(tam);
+    if (dir == NULL) {
+        perror("Error al asignar memoria");
+        return;
+    }
+
+    // 2. Añadir a nuestra lista de control
+    // Pasamos 0 y NULL en los campos de shared y mmap porque no aplican
+    addBloqueMemoria(lm, dir, tam, MALLOC, 0, NULL, 0); 
+
+    printf("Asignados %lu bytes en %p\n", tam, dir);
+}

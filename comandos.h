@@ -50,6 +50,8 @@ void Cmd_listopen(char *tr[], OpenFiles *openFiles);
 void Cmd_writestr(char *tr[]);
 void Cmd_lseek(char *tr[]);
 
+void Cmd_malloc(char *tr[], ListaMemoria *memoria);
+
 int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria);
 
 #endif
