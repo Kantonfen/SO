@@ -15,19 +15,19 @@ int main(void) {
     char input[MAX_INPUT_SIZE];
     int terminado = 0;
 
-    // 1. Inicializar Historial
+
     Historial historial;
     initHistorial(&historial);
 
-    // 2. Inicializar OpenFiles
+
     OpenFiles archivosAbiertos;
     initOpenFiles(&archivosAbiertos);
 
-    // 3. Inicializar Memoria (Nueva estructura)
+
     ListaMemoria memoria;
     initListaMemoria(&memoria);
 
-    // 4. Bucle del shell
+
     while (!terminado) {
         printf("shell > ");
         fflush(stdout);
@@ -37,12 +37,11 @@ int main(void) {
             break;
         }
 
-        // Llamamos a nuestra nueva función "cerebro"
-        // Si devuelve 1, terminado se vuelve 1 y el bucle acaba.
+
         terminado = ProcesarEntrada(input, &historial, &archivosAbiertos, &memoria);
     }
 
-    // 5. Liberar memoria al salir
+
     freeHistorial(&historial);
     freeOpenFiles(&archivosAbiertos);
     freeListaMemoria(&memoria);
