@@ -1,5 +1,5 @@
-// Xoel Queiro Lema
-// Daniel Cabrera Herrera
+// Xoel Queiro Lema (login: xoel.queiro)
+// Daniel Cabrera Herrera (login: daniel.cabrera)
 
 #include <stdio.h>
 #include <stdlib.h>
