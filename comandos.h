@@ -23,6 +23,7 @@ typedef struct {
 
 // Variable global de configuración
 extern DirParams dir_params;
+extern char **environ; // Variable estándar de POSIX para el entorno
 
 
 /* ==========================================================================
@@ -115,5 +116,5 @@ void Cmd_mem(char *tr[], ListaMemoria *lm);     // Info de variables, funciones 
 int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[]);
 
 void Cmd_uid(char *tr[]);
-
+void Cmd_showenv(char *tr[], char *envp[]);
 #endif

@@ -166,12 +166,15 @@ int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, L
     else if (strcmp(trozos[0], "recurse") == 0) {
     Cmd_recurse(trozos, memoria);
     }
+    else if (strcmp(trozos[0], "mem") == 0) {
+    Cmd_mem(trozos, memoria);
+    }
     else if (strcmp(trozos[0], "uid") == 0) {
     Cmd_uid(trozos);
     }
-else if (strcmp(trozos[0], "mem") == 0) {
-    Cmd_mem(trozos, memoria);
-}
+    else if (strcmp(trozos[0], "showenv") == 0) {
+        Cmd_showenv(trozos, envp);
+    }
     else {
         printf("Comando no reconocido: %s\n", trozos[0]);
     }
@@ -1705,4 +1708,25 @@ void Cmd_uid(char *tr[]) {
     }
 
     printf("Uso: uid [-get] | [-set [-l] id]\n");
+}
+
+void Cmd_showenv(char *tr[], char *envp[]) {
+    if (tr[1] == NULL) {
+        // Sin argumentos: muestra usando main arg3 (envp)
+        for (int i = 0; envp[i] != NULL; i++)
+            printf("%p->main arg3[%d]=(%p) %s\n", &envp[i], i, envp[i], envp[i]);
+    } 
+    else if (strcmp(tr[1], "-environ") == 0) {
+        // Opción -environ: muestra usando la variable global environ
+        for (int i = 0; environ[i] != NULL; i++)
+             printf("%p->environ[%d]=(%p) %s\n", &environ[i], i, environ[i], environ[i]);
+    }
+    else if (strcmp(tr[1], "-addr") == 0) {
+        // Opción -addr: muestra las direcciones de memoria de ambos punteros
+        printf("environ:   %p (almacenado en %p)\n", environ, &environ);
+        printf("main arg3: %p (almacenado en %p)\n", envp, &envp);
+    }
+    else {
+        printf("Uso: showenv [-environ|-addr]\n");
+    }
 }
