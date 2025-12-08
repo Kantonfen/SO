@@ -11,7 +11,7 @@
 
 #define MAX_INPUT_SIZE 1024
 
-int main(void) {
+int main(int argc, char *argv[], char *envp[]) {
     char input[MAX_INPUT_SIZE];
     int terminado = 0;
 
@@ -38,7 +38,7 @@ int main(void) {
         }
 
 
-        terminado = ProcesarEntrada(input, &historial, &archivosAbiertos, &memoria);
+        terminado = ProcesarEntrada(input, &historial, &archivosAbiertos, &memoria, envp);
     }
 
 

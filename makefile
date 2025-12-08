@@ -3,10 +3,10 @@ CC = gcc
 CFLAGS = -Wall -g
 
 # Archivos objeto
-OBJ = p2.o comandos.o historial.o openfiles.o memoria.o
+OBJ = p3.o comandos.o historial.o openfiles.o memoria.o
 
 # Ejecutable
-TARGET = p2
+TARGET = p3
 
 # Regla principal
 all: $(TARGET)

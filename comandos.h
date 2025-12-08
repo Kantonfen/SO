@@ -112,6 +112,8 @@ void Cmd_mem(char *tr[], ListaMemoria *lm);     // Info de variables, funciones 
    SECCIÓN 7: NÚCLEO DEL PROCESAMIENTO
    ========================================================================== */
 // Función principal que decide qué comando ejecutar
-int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria);
+int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[]);
+
+void Cmd_uid(char *tr[]);
 
 #endif

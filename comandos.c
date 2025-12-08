@@ -21,6 +21,9 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <pwd.h>
+#include <unistd.h>
+
 
 DirParams dir_params = {SHORT, NOLINK, NOHID, NOREC};
 
@@ -46,7 +49,7 @@ int TrocearCadena(char *cadena, char *trozos[], int max_trozos) {
     return i;
 }
 
-int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria) {
+int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[]) {
     char *trozos[64];
     int numPalabras;
 
@@ -162,7 +165,10 @@ int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, L
     }
     else if (strcmp(trozos[0], "recurse") == 0) {
     Cmd_recurse(trozos, memoria);
-}
+    }
+    else if (strcmp(trozos[0], "uid") == 0) {
+    Cmd_uid(trozos);
+    }
 else if (strcmp(trozos[0], "mem") == 0) {
     Cmd_mem(trozos, memoria);
 }
@@ -524,6 +530,15 @@ void Do_pmap(void) {
     waitpid(pid, NULL, 0);
 }
 
+void MostrarCredenciales() {
+    uid_t real = getuid();
+    uid_t efect = geteuid();
+    struct passwd *pw_real = getpwuid(real);
+    struct passwd *pw_efect = getpwuid(efect);
+
+    printf("Credencial Real: %d, (%s)\n", real, (pw_real ? pw_real->pw_name : "???"));
+    printf("Credencial Efectiva: %d, (%s)\n", efect, (pw_efect ? pw_efect->pw_name : "???"));
+}
 /* ==========================================================================
    SECCIÓN 1: INFORMACIÓN GENERAL DEL SHELL Y SISTEMA
    ========================================================================== */
@@ -1635,4 +1650,59 @@ void Cmd_mem(char *tr[], ListaMemoria *lm) {
     if (pmap) {
         Do_pmap();
     }
+}
+
+/* ==========================================================================
+   SECCIÓN 7: GESTIÓN DE CREDENCIALES DE USUARIO
+   ========================================================================== */
+
+
+void Cmd_uid(char *tr[]) {
+    if (tr[1] == NULL || strcmp(tr[1], "-get") == 0) {
+        MostrarCredenciales();
+        return;
+    }
+
+    if (strcmp(tr[1], "-set") == 0) {
+        if (tr[2] == NULL) {
+            printf("Uso: uid -set [-l] id\n");
+            return;
+        }
+
+        uid_t nuevo_uid;
+        int es_login = 0;
+        char *id_str;
+
+        if (strcmp(tr[2], "-l") == 0) {
+            if (tr[3] == NULL) {
+                printf("Uso: uid -set -l loginname\n");
+                return;
+            }
+            es_login = 1;
+            id_str = tr[3];
+        } else {
+            id_str = tr[2];
+        }
+
+        if (es_login) {
+            struct passwd *pw = getpwnam(id_str);
+            if (pw == NULL) {
+                printf("Usuario no encontrado: %s\n", id_str);
+                return;
+            }
+            nuevo_uid = pw->pw_uid;
+        } else {
+            nuevo_uid = (uid_t)atoi(id_str);
+        }
+
+        // Intentamos cambiar la credencial efectiva
+        if (seteuid(nuevo_uid) == -1) {
+            perror("Imposible cambiar credencial");
+        } else {
+            printf("Credencial efectiva cambiada a %d\n", nuevo_uid);
+        }
+        return;
+    }
+
+    printf("Uso: uid [-get] | [-set [-l] id]\n");
 }
