@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 
+
 DirParams dir_params = {SHORT, NOLINK, NOHID, NOREC};
 
 // VARIABLES GLOBALES PARA 'mem -vars'
@@ -177,6 +178,9 @@ int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, L
     }
     else if (strcmp(trozos[0], "envvar") == 0) {
         Cmd_envvar(trozos, envp);
+    }
+    else if (strcmp(trozos[0], "fork") == 0) {
+        Cmd_fork(trozos);
     }
     else {
         printf("Comando no reconocido: %s\n", trozos[0]);
@@ -1842,5 +1846,23 @@ void Cmd_envvar(char *tr[], char *envp[]) {
     }
     else {
         printf("Uso: envvar [-show | -change] ...\n");
+    }
+}
+
+void Cmd_fork(char *tr[]) {
+    pid_t pid;
+
+    if ((pid = fork()) == 0) {
+        // --- PROCESO HIJO ---
+        // Aquí vaciaríamos la lista de procesos (cuando la tengamos en el futuro)
+        printf("ejecutando proceso %d\n", getpid());
+        exit(0); // IMPORTANTE: El hijo debe morir aquí.
+    }
+    else if (pid != -1) {
+        // --- PROCESO PADRE ---
+        waitpid(pid, NULL, 0); // Espera a que el hijo termine
+    }
+    else {
+        perror("fork"); // Error al intentar crear el hijo
     }
 }

@@ -111,6 +111,7 @@ void Cmd_mem(char *tr[], ListaMemoria *lm);     // Info de variables, funciones 
 void Cmd_uid(char *tr[]);
 void Cmd_showenv(char *tr[], char *envp[]);
 void Cmd_envvar(char *tr[], char *envp[]);
+void Cmd_fork(char *tr[]);
 
 /* ==========================================================================
    SECCIÓN 7: NÚCLEO DEL PROCESAMIENTO
