@@ -108,6 +108,9 @@ void Cmd_write(char *tr[], ListaMemoria *lm);
 void Cmd_recurse(char *tr[], ListaMemoria *lm); // Prueba de pila recursiva
 void Cmd_mem(char *tr[], ListaMemoria *lm);     // Info de variables, funciones y pmap
 
+void Cmd_uid(char *tr[]);
+void Cmd_showenv(char *tr[], char *envp[]);
+void Cmd_envvar(char *tr[], char *envp[]);
 
 /* ==========================================================================
    SECCIÓN 7: NÚCLEO DEL PROCESAMIENTO
@@ -115,6 +118,7 @@ void Cmd_mem(char *tr[], ListaMemoria *lm);     // Info de variables, funciones 
 // Función principal que decide qué comando ejecutar
 int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[]);
 
-void Cmd_uid(char *tr[]);
-void Cmd_showenv(char *tr[], char *envp[]);
+
+
+
 #endif

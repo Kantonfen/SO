@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 
 #include "comandos.h"
 #include "openfiles.h"
@@ -174,6 +174,9 @@ int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, L
     }
     else if (strcmp(trozos[0], "showenv") == 0) {
         Cmd_showenv(trozos, envp);
+    }
+    else if (strcmp(trozos[0], "envvar") == 0) {
+        Cmd_envvar(trozos, envp);
     }
     else {
         printf("Comando no reconocido: %s\n", trozos[0]);
@@ -541,6 +544,40 @@ void MostrarCredenciales() {
 
     printf("Credencial Real: %d, (%s)\n", real, (pw_real ? pw_real->pw_name : "???"));
     printf("Credencial Efectiva: %d, (%s)\n", efect, (pw_efect ? pw_efect->pw_name : "???"));
+}
+
+#define MAXVAR 1024 // Asegúrate de definir esto si no está
+
+int BuscarVariable(char * var, char *e[]) {
+  int pos = 0;
+  char aux[MAXVAR];
+  
+  strcpy(aux, var);
+  strcat(aux, "=");
+  
+  while (e[pos] != NULL)
+    if (!strncmp(e[pos], aux, strlen(aux)))
+      return (pos);
+    else 
+      pos++;
+  errno = ENOENT;
+  return(-1);
+}
+
+int CambiarVariable(char * var, char * valor, char *e[]) {
+  int pos;
+  char *aux;
+   
+  if ((pos = BuscarVariable(var, e)) == -1)
+    return(-1);
+ 
+  if ((aux = (char *)malloc(strlen(var) + strlen(valor) + 2)) == NULL)
+    return -1;
+  strcpy(aux, var);
+  strcat(aux, "=");
+  strcat(aux, valor);
+  e[pos] = aux;
+  return (pos);
 }
 /* ==========================================================================
    SECCIÓN 1: INFORMACIÓN GENERAL DEL SHELL Y SISTEMA
@@ -1728,5 +1765,82 @@ void Cmd_showenv(char *tr[], char *envp[]) {
     }
     else {
         printf("Uso: showenv [-environ|-addr]\n");
+    }
+}
+
+void Cmd_envvar(char *tr[], char *envp[]) {
+    if (tr[1] == NULL) {
+        printf("Uso: envvar [-show | -change] ...\n");
+        return;
+    }
+
+    if (strcmp(tr[1], "-show") == 0) {
+        if (tr[2] == NULL) {
+            printf("Falta el nombre de la variable\n");
+            return;
+        }
+        
+        char *nombre = tr[2];
+        int pos;
+
+        // 1. Acceso por main arg3
+        pos = BuscarVariable(nombre, envp);
+        if (pos != -1)
+            printf("Con arg3 main: %s (%p) @%p\n", envp[pos], envp[pos], &envp[pos]);
+        else
+            printf("Con arg3 main: NO EXISTE\n");
+
+        // 2. Acceso por environ
+        pos = BuscarVariable(nombre, environ);
+        if (pos != -1)
+            printf("Con environ:   %s (%p) @%p\n", environ[pos], environ[pos], &environ[pos]);
+        else
+            printf("Con environ:   NO EXISTE\n");
+
+        // 3. Acceso por getenv
+        char *valor = getenv(nombre);
+        if (valor)
+            printf("Con getenv:    %s (%p)\n", valor, valor);
+        else
+            printf("Con getenv:    NO EXISTE\n");
+    } 
+    else if (strcmp(tr[1], "-change") == 0) {
+        if (tr[2] == NULL || tr[3] == NULL || tr[4] == NULL) {
+            printf("Uso: envvar -change [-a|-e|-p] var valor\n");
+            return;
+        }
+
+        char *opcion = tr[2];
+        char *nombre = tr[3];
+        char *valor = tr[4];
+
+        if (strcmp(opcion, "-a") == 0) {
+            // Cambiar en arg3 main
+            if (CambiarVariable(nombre, valor, envp) == -1)
+                perror("Imposible cambiar variable en arg3"); // Ojo: BuscarVariable pone errno=ENOENT si no existe
+        }
+        else if (strcmp(opcion, "-e") == 0) {
+            // Cambiar en environ manualmente
+            if (CambiarVariable(nombre, valor, environ) == -1)
+                perror("Imposible cambiar variable en environ");
+        }
+        else if (strcmp(opcion, "-p") == 0) {
+            // Usar putenv
+            // putenv requiere una cadena "VAR=VALOR" que debe persistir en memoria.
+            char *nueva = malloc(strlen(nombre) + strlen(valor) + 2);
+            if (nueva == NULL) {
+                perror("malloc");
+                return;
+            }
+            sprintf(nueva, "%s=%s", nombre, valor);
+            if (putenv(nueva) != 0)
+                perror("putenv");
+        } 
+        else {
+            printf("Opcion invalida: %s\n", opcion);
+        }
+    }
+    else {
+        printf("Uso: envvar [-show | -change] ...\n");
     }
 }
