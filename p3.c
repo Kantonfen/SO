@@ -41,7 +41,7 @@ int main(int argc, char *argv[], char *envp[]) {
         }
 
 
-        terminado = ProcesarEntrada(input, &historial, &archivosAbiertos, &memoria, envp);
+        terminado = ProcesarEntrada(input, &historial, &archivosAbiertos, &memoria, envp, &procesos);
     }
 
 

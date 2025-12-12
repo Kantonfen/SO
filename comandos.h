@@ -123,7 +123,7 @@ void Cmd_lanzar(char *tr[], ListaProcesos *l);
    SECCIÓN 7: NÚCLEO DEL PROCESAMIENTO
    ========================================================================== */
 // Función principal que decide qué comando ejecutar
-int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[]);
+int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[], ListaProcesos *procesos);
 
 
 
