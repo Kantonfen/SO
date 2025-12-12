@@ -38,62 +38,54 @@ int v_global_u1, v_global_u2, v_global_u3;              // Externas no inicializ
    SECCIÓN 0: Procesamiento de entrada y Funciones auxiliares
    ========================================================================== */
 
-   // Estructura para devolver info del parseo
+
 typedef struct {
     int background;
     int priority;
-    char **argv_exec; // Puntero al inicio de los argumentos limpios
+    char **argv_exec; 
 } InfoEjecucion;
 
 InfoEjecucion AnalizarProgSpec(char *tr[]) {
     InfoEjecucion info;
     info.background = 0;
-    info.priority = 0; // 0 es la prioridad normal, no -1.
+    info.priority = 0;
     int hay_priority = 0;
     info.argv_exec = tr;
 
     int i = 0;
-    while (tr[i] != NULL) i++; // Contamos argumentos
+    while (tr[i] != NULL) i++; 
     if (i == 0) return info;
 
-    // 1. Mirar si hay '&' al final [cite: 14, 19]
+
     if (strcmp(tr[i-1], "&") == 0) {
         info.background = 1;
-        tr[i-1] = NULL; // Lo quitamos para execvp
+        tr[i-1] = NULL;
         i--; 
     }
 
-    // 2. Mirar si hay '@pri' en algún sitio [cite: 14, 18]
-    // Recorremos buscando el '@'. Si está, tomamos el valor y ponemos NULL ahí.
-    // Ojo: si ponemos NULL en medio, execvp dejará de leer ahí.
-    // El PDF sugiere que suelen ir al final, pero debemos tener cuidado.
+
     for (int j = 0; j < i; j++) {
         if (tr[j][0] == '@') {
-            info.priority = atoi(tr[j] + 1); // +1 para saltar el '@'
+            info.priority = atoi(tr[j] + 1); 
             hay_priority = 1;
-            tr[j] = NULL; // Cortamos aquí.
-            // Nota: Si hay argumentos DESPUÉS del @, se perderán con esta lógica simple.
-            // Para esta práctica, asumiremos que @pri va al final de la linea de argumentos.
+            tr[j] = NULL;
+
             break; 
         }
     }
-    
-    // Si no se especificó prioridad, usamos una bandera para no cambiarla (ej: -1000)
-    // Pero setpriority(..., 0) pone prioridad 0. 
-    // Vamos a usar un truco: si no hay '@', priority = -9999
     if (!hay_priority) info.priority = -9999;
 
     return info;
 }
 
-// Une los argumentos en una sola cadena para guardarla en la lista
+
 char *ReconstruirComando(char *argv[]) {
-    static char buffer[1024]; // Static para no liar con malloc/free aquí
+    static char buffer[1024];
     buffer[0] = '\0';
     
     for (int i = 0; argv[i] != NULL; i++) {
         strcat(buffer, argv[i]);
-        if (argv[i+1] != NULL) strcat(buffer, " "); // Espacio entre args
+        if (argv[i+1] != NULL) strcat(buffer, " "); 
     }
     return buffer;
 }
@@ -253,7 +245,6 @@ int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, L
         Cmd_exec(trozos);
     }
  else {
-        // IMPORTANTE: Antes "Comando no reconocido", ahora intentamos ejecutarlo
         Cmd_lanzar(trozos, procesos);
     }
     return 0;
@@ -614,17 +605,15 @@ void Do_pmap(void) {
 void MostrarCredenciales() {
     uid_t real = getuid();
     struct passwd *pw_real = getpwuid(real);
-    char *nombre_real = (pw_real) ? strdup(pw_real->pw_name) : strdup("???"); // Copiamos el nombre
+    char *nombre_real = (pw_real) ? strdup(pw_real->pw_name) : strdup("???");
 
     uid_t efect = geteuid();
     struct passwd *pw_efect = getpwuid(efect);
-    // No hace falta copiar el segundo porque lo usamos ya mismo, 
-    // pero el primero lo tenemos guardado en 'nombre_real'
 
     printf("Credencial Real: %d, (%s)\n", real, nombre_real);
     printf("Credencial Efectiva: %d, (%s)\n", efect, (pw_efect ? pw_efect->pw_name : "???"));
 
-    free(nombre_real); // Liberamos la copia
+    free(nombre_real);
 }
 
 #define MAXVAR 1024 // Asegúrate de definir esto si no está
@@ -1816,7 +1805,6 @@ void Cmd_uid(char *tr[]) {
             nuevo_uid = (uid_t)atoi(id_str);
         }
 
-        // Intentamos cambiar la credencial efectiva
         if (seteuid(nuevo_uid) == -1) {
             perror("Imposible cambiar credencial");
         } else {
@@ -1830,17 +1818,16 @@ void Cmd_uid(char *tr[]) {
 
 void Cmd_showenv(char *tr[], char *envp[]) {
     if (tr[1] == NULL) {
-        // Sin argumentos: muestra usando main arg3 (envp)
         for (int i = 0; envp[i] != NULL; i++)
             printf("%p->main arg3[%d]=(%p) %s\n", &envp[i], i, envp[i], envp[i]);
     } 
     else if (strcmp(tr[1], "-environ") == 0) {
-        // Opción -environ: muestra usando la variable global environ
+
         for (int i = 0; environ[i] != NULL; i++)
              printf("%p->environ[%d]=(%p) %s\n", &environ[i], i, environ[i], environ[i]);
     }
     else if (strcmp(tr[1], "-addr") == 0) {
-        // Opción -addr: muestra las direcciones de memoria de ambos punteros
+
         printf("environ:   %p (almacenado en %p)\n", environ, &environ);
         printf("main arg3: %p (almacenado en %p)\n", envp, &envp);
     }
@@ -1864,21 +1851,21 @@ void Cmd_envvar(char *tr[], char *envp[]) {
         char *nombre = tr[2];
         int pos;
 
-        // 1. Acceso por main arg3
+
         pos = BuscarVariable(nombre, envp);
         if (pos != -1)
             printf("Con arg3 main: %s (%p) @%p\n", envp[pos], envp[pos], &envp[pos]);
         else
             printf("Con arg3 main: NO EXISTE\n");
 
-        // 2. Acceso por environ
+
         pos = BuscarVariable(nombre, environ);
         if (pos != -1)
             printf("Con environ:   %s (%p) @%p\n", environ[pos], environ[pos], &environ[pos]);
         else
             printf("Con environ:   NO EXISTE\n");
 
-        // 3. Acceso por getenv
+
         char *valor = getenv(nombre);
         if (valor)
             printf("Con getenv:    %s (%p)\n", valor, valor);
@@ -1896,18 +1883,17 @@ void Cmd_envvar(char *tr[], char *envp[]) {
         char *valor = tr[4];
 
         if (strcmp(opcion, "-a") == 0) {
-            // Cambiar en arg3 main
+
             if (CambiarVariable(nombre, valor, envp) == -1)
-                perror("Imposible cambiar variable en arg3"); // Ojo: BuscarVariable pone errno=ENOENT si no existe
+                perror("Imposible cambiar variable en arg3");
         }
         else if (strcmp(opcion, "-e") == 0) {
-            // Cambiar en environ manualmente
+
             if (CambiarVariable(nombre, valor, environ) == -1)
                 perror("Imposible cambiar variable en environ");
         }
         else if (strcmp(opcion, "-p") == 0) {
-            // Usar putenv
-            // putenv requiere una cadena "VAR=VALOR" que debe persistir en memoria.
+
             char *nueva = malloc(strlen(nombre) + strlen(valor) + 2);
             if (nueva == NULL) {
                 perror("malloc");
@@ -1930,17 +1916,16 @@ void Cmd_fork(char *tr[]) {
     pid_t pid;
 
     if ((pid = fork()) == 0) {
-        // --- PROCESO HIJO ---
-        // Aquí vaciaríamos la lista de procesos (cuando la tengamos en el futuro)
+
         printf("ejecutando proceso %d\n", getpid());
-        exit(0); // IMPORTANTE: El hijo debe morir aquí.
+        exit(0);
     }
     else if (pid != -1) {
-        // --- PROCESO PADRE ---
-        waitpid(pid, NULL, 0); // Espera a que el hijo termine
+
+        waitpid(pid, NULL, 0); 
     }
     else {
-        perror("fork"); // Error al intentar crear el hijo
+        perror("fork");
     }
 }
 
@@ -1954,7 +1939,7 @@ void Cmd_deljobs(char *tr[], ListaProcesos *l) {
         return;
     }
 
-    updateListaProcesos(l); // Actualizamos antes de borrar nada
+    updateListaProcesos(l);
 
     for (int i = 0; i < l->tamano; i++) {
         int eliminar = 0;
@@ -1967,10 +1952,9 @@ void Cmd_deljobs(char *tr[], ListaProcesos *l) {
         }
 
         if (eliminar) {
-            // Usamos la función de la lista, mucho más limpio
+
             removeProceso(l, l->data[i].pid);
-            i--; // IMPORTANTE: Al borrar, los elementos se desplazan a la izquierda.
-                 // Retrocedemos el índice para no saltarnos ninguno.
+            i--; 
         }
     }
 }
@@ -1991,31 +1975,28 @@ void Cmd_exec(char *tr[]) {
 }
 
 void Cmd_lanzar(char *tr[], ListaProcesos *l) {
-    // Analizamos la linea para quitar & y @pri
+
     InfoEjecucion info = AnalizarProgSpec(tr);
     pid_t pid;
 
     if ((pid = fork()) == 0) {
-        // --- PROCESO HIJO ---
         
         if (info.priority != -9999) {
-            // MEJORA CHATGPT: Chequeo de error en setpriority
+
             if (setpriority(PRIO_PROCESS, 0, info.priority) == -1) {
-                perror("setpriority"); // Avisamos pero intentamos ejecutar igual
+                perror("setpriority");
             }
         }
 
         execvp(info.argv_exec[0], info.argv_exec);
         
-        // Si falla execvp
         perror("Imposible ejecutar");
         exit(EXIT_FAILURE);
     } 
     else if (pid > 0) {
-        // --- PROCESO PADRE ---
         
         if (info.background) {
-            // MEJORA CHATGPT: Guardar línea completa (ej: "sleep 100") y no solo "sleep"
+
             char *cmd_completo = ReconstruirComando(info.argv_exec);
             
             addProceso(l, pid, cmd_completo);

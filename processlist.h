@@ -13,24 +13,24 @@ typedef enum {
 
 typedef struct {
     pid_t pid;
-    char *comando;      // Línea de comando ejecutada
-    char tiempo[32];    // Fecha y hora de lanzamiento
+    char *comando;      
+    char tiempo[32];    
     EstadoProceso estado;
-    int info;           // Valor de retorno (si TERMINADO) o señal (si SENALADO/DETENIDO)
+    int info;           
 } Proceso;
 
 typedef struct {
-    Proceso *data;      // Array dinámico
+    Proceso *data;      
     int tamano;
     int capacidad;
 } ListaProcesos;
 
-// Funciones de gestión de la lista
+
 void initListaProcesos(ListaProcesos *l);
 void freeListaProcesos(ListaProcesos *l);
 void addProceso(ListaProcesos *l, pid_t pid, const char *cmd);
 void removeProceso(ListaProcesos *l, pid_t pid);
 void printListaProcesos(ListaProcesos *l);
-void updateListaProcesos(ListaProcesos *l); // Actualiza el estado con waitpid
+void updateListaProcesos(ListaProcesos *l); 
 
 #endif
