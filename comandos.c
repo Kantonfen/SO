@@ -86,6 +86,17 @@ InfoEjecucion AnalizarProgSpec(char *tr[]) {
     return info;
 }
 
+// Une los argumentos en una sola cadena para guardarla en la lista
+char *ReconstruirComando(char *argv[]) {
+    static char buffer[1024]; // Static para no liar con malloc/free aquí
+    buffer[0] = '\0';
+    
+    for (int i = 0; argv[i] != NULL; i++) {
+        strcat(buffer, argv[i]);
+        if (argv[i+1] != NULL) strcat(buffer, " "); // Espacio entre args
+    }
+    return buffer;
+}
 
 int TrocearCadena(char *cadena, char *trozos[], int max_trozos) {
     int i = 0;
@@ -602,12 +613,18 @@ void Do_pmap(void) {
 
 void MostrarCredenciales() {
     uid_t real = getuid();
-    uid_t efect = geteuid();
     struct passwd *pw_real = getpwuid(real);
-    struct passwd *pw_efect = getpwuid(efect);
+    char *nombre_real = (pw_real) ? strdup(pw_real->pw_name) : strdup("???"); // Copiamos el nombre
 
-    printf("Credencial Real: %d, (%s)\n", real, (pw_real ? pw_real->pw_name : "???"));
+    uid_t efect = geteuid();
+    struct passwd *pw_efect = getpwuid(efect);
+    // No hace falta copiar el segundo porque lo usamos ya mismo, 
+    // pero el primero lo tenemos guardado en 'nombre_real'
+
+    printf("Credencial Real: %d, (%s)\n", real, nombre_real);
     printf("Credencial Efectiva: %d, (%s)\n", efect, (pw_efect ? pw_efect->pw_name : "???"));
+
+    free(nombre_real); // Liberamos la copia
 }
 
 #define MAXVAR 1024 // Asegúrate de definir esto si no está
@@ -1961,51 +1978,49 @@ void Cmd_deljobs(char *tr[], ListaProcesos *l) {
 void Cmd_exec(char *tr[]) {
     if (tr[1] == NULL) return;
 
-    // Analizamos los argumentos empezando desde tr[1] 
-    // (tr[0] es "exec", lo ignoramos)
     InfoEjecucion info = AnalizarProgSpec(&tr[1]);
 
-    // Cambiar prioridad si se solicitó
     if (info.priority != -9999) {
-        setpriority(PRIO_PROCESS, 0, info.priority); 
+        if (setpriority(PRIO_PROCESS, 0, info.priority) == -1) {
+            perror("setpriority");
+        }
     }
 
-    // Ejecutar (reemplaza al shell actual)
     execvp(info.argv_exec[0], info.argv_exec);
-    
-    // Si llegamos aquí, execvp falló
-    perror("execvp");
+    perror("Imposible ejecutar");
 }
 
 void Cmd_lanzar(char *tr[], ListaProcesos *l) {
-    // Analizamos toda la linea (tr[0] es el programa)
+    // Analizamos la linea para quitar & y @pri
     InfoEjecucion info = AnalizarProgSpec(tr);
     pid_t pid;
 
     if ((pid = fork()) == 0) {
         // --- PROCESO HIJO ---
         
-        // Si hay prioridad, la cambiamos
         if (info.priority != -9999) {
-            setpriority(PRIO_PROCESS, 0, info.priority);
+            // MEJORA CHATGPT: Chequeo de error en setpriority
+            if (setpriority(PRIO_PROCESS, 0, info.priority) == -1) {
+                perror("setpriority"); // Avisamos pero intentamos ejecutar igual
+            }
         }
 
-        // Ejecutamos
         execvp(info.argv_exec[0], info.argv_exec);
         
-        // Si falla
-        perror("execvp");
+        // Si falla execvp
+        perror("Imposible ejecutar");
         exit(EXIT_FAILURE);
     } 
     else if (pid > 0) {
-        // --- PROCESO PADRE (SHELL) ---
+        // --- PROCESO PADRE ---
         
         if (info.background) {
-            // Si es background, lo añadimos a la lista [cite: 44, 73]
-            addProceso(l, pid, info.argv_exec[0]); // Guardamos el nombre o la linea entera
+            // MEJORA CHATGPT: Guardar línea completa (ej: "sleep 100") y no solo "sleep"
+            char *cmd_completo = ReconstruirComando(info.argv_exec);
+            
+            addProceso(l, pid, cmd_completo);
             printf("Proceso %d ejecutándose en segundo plano\n", pid);
         } else {
-            // Si es foreground, esperamos [cite: 50, 62]
             waitpid(pid, NULL, 0);
         }
     } 
