@@ -4,6 +4,7 @@
 #include "openfiles.h"
 #include "historial.h"
 #include "memoria.h"
+#include "processlist.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <pwd.h>
-#include <unistd.h>
+#include <sys/resource.h>
 
 
 
@@ -37,6 +38,55 @@ int v_global_u1, v_global_u2, v_global_u3;              // Externas no inicializ
    SECCIÓN 0: Procesamiento de entrada y Funciones auxiliares
    ========================================================================== */
 
+   // Estructura para devolver info del parseo
+typedef struct {
+    int background;
+    int priority;
+    char **argv_exec; // Puntero al inicio de los argumentos limpios
+} InfoEjecucion;
+
+InfoEjecucion AnalizarProgSpec(char *tr[]) {
+    InfoEjecucion info;
+    info.background = 0;
+    info.priority = 0; // 0 es la prioridad normal, no -1.
+    int hay_priority = 0;
+    info.argv_exec = tr;
+
+    int i = 0;
+    while (tr[i] != NULL) i++; // Contamos argumentos
+    if (i == 0) return info;
+
+    // 1. Mirar si hay '&' al final [cite: 14, 19]
+    if (strcmp(tr[i-1], "&") == 0) {
+        info.background = 1;
+        tr[i-1] = NULL; // Lo quitamos para execvp
+        i--; 
+    }
+
+    // 2. Mirar si hay '@pri' en algún sitio [cite: 14, 18]
+    // Recorremos buscando el '@'. Si está, tomamos el valor y ponemos NULL ahí.
+    // Ojo: si ponemos NULL en medio, execvp dejará de leer ahí.
+    // El PDF sugiere que suelen ir al final, pero debemos tener cuidado.
+    for (int j = 0; j < i; j++) {
+        if (tr[j][0] == '@') {
+            info.priority = atoi(tr[j] + 1); // +1 para saltar el '@'
+            hay_priority = 1;
+            tr[j] = NULL; // Cortamos aquí.
+            // Nota: Si hay argumentos DESPUÉS del @, se perderán con esta lógica simple.
+            // Para esta práctica, asumiremos que @pri va al final de la linea de argumentos.
+            break; 
+        }
+    }
+    
+    // Si no se especificó prioridad, usamos una bandera para no cambiarla (ej: -1000)
+    // Pero setpriority(..., 0) pone prioridad 0. 
+    // Vamos a usar un truco: si no hay '@', priority = -9999
+    if (!hay_priority) info.priority = -9999;
+
+    return info;
+}
+
+
 int TrocearCadena(char *cadena, char *trozos[], int max_trozos) {
     int i = 0;
     char *tok;
@@ -50,7 +100,7 @@ int TrocearCadena(char *cadena, char *trozos[], int max_trozos) {
     return i;
 }
 
-int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[]) {
+int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, ListaMemoria *memoria , char *envp[], ListaProcesos *procesos) {
     char *trozos[64];
     int numPalabras;
 
@@ -182,8 +232,18 @@ int ProcesarEntrada(char *entrada, Historial *historial, OpenFiles *openFiles, L
     else if (strcmp(trozos[0], "fork") == 0) {
         Cmd_fork(trozos);
     }
-    else {
-        printf("Comando no reconocido: %s\n", trozos[0]);
+    else if (strcmp(trozos[0], "jobs") == 0) {
+        Cmd_jobs(trozos, procesos);
+    }
+    else if (strcmp(trozos[0], "deljobs") == 0) {
+        Cmd_deljobs(trozos, procesos);
+    }
+    else if (strcmp(trozos[0], "exec") == 0) {
+        Cmd_exec(trozos);
+    }
+ else {
+        // IMPORTANTE: Antes "Comando no reconocido", ahora intentamos ejecutarlo
+        Cmd_lanzar(trozos, procesos);
     }
     return 0;
 }
@@ -1864,5 +1924,92 @@ void Cmd_fork(char *tr[]) {
     }
     else {
         perror("fork"); // Error al intentar crear el hijo
+    }
+}
+
+void Cmd_jobs(char *tr[], ListaProcesos *l) {
+    printListaProcesos(l);
+}
+
+void Cmd_deljobs(char *tr[], ListaProcesos *l) {
+    if (tr[1] == NULL) {
+        printf("Uso: deljobs -term | -sig\n");
+        return;
+    }
+
+    updateListaProcesos(l); // Actualizamos antes de borrar nada
+
+    for (int i = 0; i < l->tamano; i++) {
+        int eliminar = 0;
+        
+        if (l->data[i].estado == TERMINADO && strcmp(tr[1], "-term") == 0) {
+            eliminar = 1;
+        }
+        else if (l->data[i].estado == SENALADO && strcmp(tr[1], "-sig") == 0) {
+            eliminar = 1;
+        }
+
+        if (eliminar) {
+            // Usamos la función de la lista, mucho más limpio
+            removeProceso(l, l->data[i].pid);
+            i--; // IMPORTANTE: Al borrar, los elementos se desplazan a la izquierda.
+                 // Retrocedemos el índice para no saltarnos ninguno.
+        }
+    }
+}
+
+void Cmd_exec(char *tr[]) {
+    if (tr[1] == NULL) return;
+
+    // Analizamos los argumentos empezando desde tr[1] 
+    // (tr[0] es "exec", lo ignoramos)
+    InfoEjecucion info = AnalizarProgSpec(&tr[1]);
+
+    // Cambiar prioridad si se solicitó
+    if (info.priority != -9999) {
+        setpriority(PRIO_PROCESS, 0, info.priority); 
+    }
+
+    // Ejecutar (reemplaza al shell actual)
+    execvp(info.argv_exec[0], info.argv_exec);
+    
+    // Si llegamos aquí, execvp falló
+    perror("execvp");
+}
+
+void Cmd_lanzar(char *tr[], ListaProcesos *l) {
+    // Analizamos toda la linea (tr[0] es el programa)
+    InfoEjecucion info = AnalizarProgSpec(tr);
+    pid_t pid;
+
+    if ((pid = fork()) == 0) {
+        // --- PROCESO HIJO ---
+        
+        // Si hay prioridad, la cambiamos
+        if (info.priority != -9999) {
+            setpriority(PRIO_PROCESS, 0, info.priority);
+        }
+
+        // Ejecutamos
+        execvp(info.argv_exec[0], info.argv_exec);
+        
+        // Si falla
+        perror("execvp");
+        exit(EXIT_FAILURE);
+    } 
+    else if (pid > 0) {
+        // --- PROCESO PADRE (SHELL) ---
+        
+        if (info.background) {
+            // Si es background, lo añadimos a la lista [cite: 44, 73]
+            addProceso(l, pid, info.argv_exec[0]); // Guardamos el nombre o la linea entera
+            printf("Proceso %d ejecutándose en segundo plano\n", pid);
+        } else {
+            // Si es foreground, esperamos [cite: 50, 62]
+            waitpid(pid, NULL, 0);
+        }
+    } 
+    else {
+        perror("fork");
     }
 }

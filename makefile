@@ -3,7 +3,7 @@ CC = gcc
 CFLAGS = -Wall -g
 
 # Archivos objeto
-OBJ = p3.o comandos.o historial.o openfiles.o memoria.o
+OBJ = p3.o comandos.o historial.o openfiles.o memoria.o processlist.o
 
 # Ejecutable
 TARGET = p3

@@ -5,6 +5,7 @@
 #include "historial.h"
 #include "openfiles.h"
 #include "memoria.h"
+#include "processlist.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -112,6 +113,11 @@ void Cmd_uid(char *tr[]);
 void Cmd_showenv(char *tr[], char *envp[]);
 void Cmd_envvar(char *tr[], char *envp[]);
 void Cmd_fork(char *tr[]);
+
+void Cmd_jobs(char *tr[], ListaProcesos *l);
+void Cmd_deljobs(char *tr[], ListaProcesos *l);
+void Cmd_exec(char *tr[]);
+void Cmd_lanzar(char *tr[], ListaProcesos *l);
 
 /* ==========================================================================
    SECCIÓN 7: NÚCLEO DEL PROCESAMIENTO

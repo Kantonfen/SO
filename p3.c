@@ -8,6 +8,7 @@
 #include "comandos.h"
 #include "openfiles.h"
 #include "memoria.h"
+#include "processlist.h"
 
 #define MAX_INPUT_SIZE 1024
 
@@ -27,6 +28,8 @@ int main(int argc, char *argv[], char *envp[]) {
     ListaMemoria memoria;
     initListaMemoria(&memoria);
 
+    ListaProcesos procesos;
+    initListaProcesos(&procesos);
 
     while (!terminado) {
         printf("shell > ");
@@ -45,6 +48,7 @@ int main(int argc, char *argv[], char *envp[]) {
     freeHistorial(&historial);
     freeOpenFiles(&archivosAbiertos);
     freeListaMemoria(&memoria);
+    freeListaProcesos(&procesos);
 
     return 0;
 }
